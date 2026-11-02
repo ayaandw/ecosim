@@ -20,6 +20,7 @@ if "initialized" not in st.session_state:
     st.session_state.victory = False
     st.session_state.show_tutorial = True
     st.session_state.viewing_summary = False
+    st.session_state.tutorial_step = 1
     st.session_state.latest_summary = {}
     st.session_state.event_log = ["Simulation started! Balance the environment, business, and civilian interests."]
     st.session_state.history = [{"Year": 2026, "Budget": 15_000_000, "Env Approval": 70, "Biz Approval": 60, "Res Approval": 65}]
@@ -30,21 +31,82 @@ st.title("🏙️ EcoSim, an Urban Climate Management Simulation")
 st.markdown("Manage city budgets, infrastructure upkeep, and climate challenges under strict public scrutiny.")
 
 if st.session_state.show_tutorial:
-    with st.expander("📖 **Welcome Mayor! Click here for your Tutorial**", expanded = True):
+    st.markdown("---")
+    st.warning(f"**Welcome Mayor! This is a tutorial for EcoSim (Step {st.session_state.tutorial_step} of 5)**")
+    if st.session_state.tutorial_step == 1:
         st.markdown("""
-        Welcome to **EcoSim**, a city management strategy game where, above all, you must manage your city's climate.
-        * **Your Goal:** Survive a 10-year mayoral term without letting any demographic group's approval fall to 0% or driving the city into bankruptcy.
-        * **The 3 Groups:**
-            * 🌿 **Environmentalists:** Demand parks, solar energy, and heavy heat reduction.
-            * 💼 **Business Leaders:** Demand industrial and commercial development for tax revenue.
-            * 🏡 **Working Class Residents:** Care about water security, balanced costs, and stable city finances.
-        * **Group Interactions:** Keep groups happy (>85%) for major bonuses, and face protests if they drop below 40%.
-        * Remember: You can't keep everyone happy with one policy. You have to make tough choices
+        ### Step 1: Three Demographics of People
+        In *EcoSim*, you cannot please everybody. Look at your sidebar (once you enter office) to monitor three groups:
+        * 🌿 **Environmentalists:** Want green infrastructure and low heat.
+        * 💼 **Business Leaders:** Want commerce and revenue.
+        * 🏡 **Working Class Residents:** Care about water security and avoiding municipal debt.
         """)
-        if st.button("✅ Got it! Start my term"):
+        if st.button("Next: Finances ➡️"):
+            st.session_state.tutorial_step = 2
+            st.rerun()
+
+    elif st.session_state.tutorial_step == 2:
+        st.markdown("""
+        ### Lesson 2: Budgets & Debt
+        You start with **$15,000,000**. Infrastructure has heavy annual upkeep costs.
+        * If your budget dips below $0, you will face compounding interest penalties and credit rating drops.
+        * You can issue **Bonds** if you need cash, but residents will grow unhappy with the burden of debt.
+        """)
+        col_t1, col_t2 = st.columns(2)
+        if col_t1.button("⬅️ Back"):
+            st.session_state.tutorial_step = 1
+            st.rerun()
+        if col_t2.button("Next: Zoning & Infrastructure ➡️"):
+            st.session_state.tutorial_step = 3
+            st.rerun()
+
+
+    elif st.session_state.tutorial_step == 3:
+        st.markdown("""
+        ### Step 3: The 3x3 Zoning Grid
+        Your city is represented by a 3x3 grid.
+        * Click an empty plot to choose its construction (Parks, Solar, Reservoirs, Factories, or Commercial Blocks).
+        * Read the built-in description carefully - it shows upfront costs, water consumption, upkeep, and approval trade-offs.
+        * You can also **demolish** plots later for $1M if you need to change your strategy.
+        """)
+        col_t1, col_t2 = st.columns(2)
+        if col_t1.button("⬅️ Back"):
+            st.session_state.tutorial_step = 2
+            st.rerun()
+        if col_t2.button("Next: Policies and Crises ➡️"):
+            st.session_state.tutorial_step = 4
+            st.rerun()
+    
+    elif st.session_state.tutorial_step == 4:
+        st.markdown("""
+        ### Step 4: City Policies and Annual Events
+        * **Policies:** At the start of each year, choose 1 executive policy to alter your city's rules
+        * **Random Events:** Each year brings unpredictable events which will put your leadership to the test.
+        """)
+        col_t1, col_t2 = st.columns(2)
+        if col_t1.button("⬅️ Back"):
+            st.session_state.tutorial_step = 3
+            st.rerun()
+        if col_t2.button("Next: The Final Goal ➡️"):
+            st.session_state.tutorial_step = 5
+            st.rerun()
+
+    elif st.session_state.tutorial_step == 5:
+        st.markdown("""
+        ### Step 5: Winning & The Year-End Gazette
+        * **Your Objective:** Survive the full 10 years while keeping all the demographics happy and your budget high.
+        * **Yearly Review:** Every time you advance to the next year, a newspaper shows stats for that year.
+
+        *Ready to take office, Mayor?*
+        """)
+        col_t1, col_t2 = st.columns(2)
+        if col_t1.button("⬅️ Back"):
+            st.session_state.tutorial_step = 4
+            st.rerun()
+        if col_t2.button(" Finish Tutorial & Begin! ➡️"):
             st.session_state.show_tutorial = False
             st.rerun()
-        st.stop()
+    st.stop()
 
 st.sidebar.header("📊 City Finances & Stats")
 st.sidebar.metric("💰 Budget", f"${st.session_state.budget:,.0f}")
@@ -73,6 +135,19 @@ if st.session_state.viewing_summary:
     st.info(f"**Annual Event:** {sum_data['event_desc']}")
 
     st.markdown(f"**Major Group Events:** \n {sum_data['faction_msg']}")
+
+    with st.expander(" **View Itemized Approval Rating Drivers**", expanded = True):
+        st.markdown(f"** Environmentalists ({sum_data['env_diff']:+d}%):**")
+        for driver in sum_data['env_drivers']:
+            st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;• {driver}")
+
+        st.markdown(f"** Business Leaders ({sum_data['biz_diff']:+d}%):**")
+        for driver in sum_data['biz_drivers']:
+            st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;• {driver}")
+
+        st.markdown(f"** Working Class Residents ({sum_data['res_diff']:+d}%):**")
+        for driver in sum_data['res_drivers']:
+            st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;• {driver}")
 
     with st.expander(" **View Itemized Municipal Budget Invoice**", expanded = True):
         st.markdown(f"• **Base Revenue:** +$3,500,000")
@@ -181,9 +256,20 @@ for idx, tile_id in enumerate(st.session_state.grid.keys()):
             st.caption(f"🔸 {asset_data['desc_upkeep']}")
             st.caption(f"⚡ {asset_data['desc_effect']}")
 
+            will_be_deficit = (st.session_state.budget - asset_data["cost"]) < 0
+            if will_be_deficit:
+                st.warning(" Warning: This purchase will plunge the city into a budget deficit!")
+                confirm_deficit = st.checkbox(f"Authorize high-risk deficit financing for Plot {tile_id}", key=f"conf_def_{tile_id}")
+            else:
+                confirm_deficit = True
+
             if st.button(f"Construct (Plot {tile_id})", key = f"build_{tile_id}"):
                 data = ASSETS[chosen_asset]
-                if st.session_state.budget >= data["cost"] and st.session_state.water_supply >= data["water_cost"]:
+                if not confirm_deficit and will_be_deficit:
+                    st.error("You must check the confirmation box to authorize deficit spending!")
+                elif st.session_state.water_supply < data["water_cost"]:
+                    st.error("Insufficient water for construction!")
+                elif (st.session_state.budget >= data["cost"] or confirm_deficit):
                     st.session_state.budget -= data["cost"]
                     st.session_state.water_supply -= data["water_cost"]
                     st.session_state.temp_reduction += data["heat_mod"]
@@ -222,11 +308,34 @@ if st.session_state.game_over:
             del st.session_state[key]
         st.rerun()
 elif st.session_state.victory:
-    st.success("🏆 **Victory!** Your leadership stood the test for over 10 years!")
+    st.success("🏆 **10-Year Mayoral Term Completed!")
+    st.markdown("## **MAYORAL TERM PERFORMANCE**")
+
+    avg_approval = (st.session_state.approval_env + st.session_state.approval_biz + st.session_state.approval_res) / 3
+    net_worth = st.session_state.budget - st.session_state.debt
+
+    grade_env = "A" if st.session_state.temp_reduction >= 2.0 else ("B" if st.session_state.temp_reduction >= 1.0 else "C")
+    grade_fiscal = "A" if net_worth > 20_000_000 else ("B" if net_worth > 5_000_000 else "D")
+    grade_politics = "A" if avg_approval >= 75 else ("B" if avg_approval >= 55 else "C")
+
+    col_g1, col_g2, col_g3 = st.columns(3)
+    col_g1.metric(" Climate Grade", grade_env, f"{st.session_state.temp_reduction:.1f}°C Heat Reduction")
+    col_g2.metric(" Fiscal Grade", grade_fiscal, f"${net_worth:,.0f} Net Worth")
+    col_g3.metric(" Governance Grade", grade_politics, f"{avg_approval:.1f}% Avg Approval")
+
+    st.markdown("### **Demographic Breakdown**")
+    if st.session_state.approval_env < 50:
+        st.warning(" **Environmental Critique:** Your administration prioritized immediate revenue over climate conservation. Your city's carbon footprint remains high.")
+    if st.session_state.approval_biz < 50:
+        st.warning(" **Commercial Critique:** Business leaders feel over-regulated and taxed, stifling commercial expansion.")
+    if st.session_state.approval_res < 50:
+        st.warning(" **Civilian Critique:** Working-class residents bore the brunt of negative impacts from your policies.")
+
     if st.button("🔄 Play Again"):
         for key in list(st.session_state.keys()):
             del st.session_state[key]
         st.rerun()
+
 elif st.button("⏩ Advance to Next Year"):
     old_budget = st.session_state.budget
     old_env = st.session_state.approval_env
@@ -366,10 +475,32 @@ elif st.button("⏩ Advance to Next Year"):
         "interest_paid": (abs(old_budget) * 0.08) if old_budget < 0 or st.session_state.debt > 0 else 0,
         "env_curr": st.session_state.approval_env,
         "env_diff": st.session_state.approval_env - old_env,
+        "env_drivers": [
+            f"Zoning Grid: {env_shift:+d}%",
+            f"Policy Impact: {'+4%' if 'Green' in st.session_state.active_policy else ('-7%' if 'Industrial' in st.session_state.active_policy else '0%')}",
+            f"Event Penalty: {('-4%' if event_type in ['drought', 'heatwave'] else '0%')}",
+            f"Heat Penalty: {'-10%' if st.session_state.temp_reduction < 1.5 else 'None'}",
+            f"Protest Effects: {'-5%' if st.session_state.approval_res < 40 else 'None'}"
+        ],
         "biz_curr": st.session_state.approval_biz,
         "biz_diff": st.session_state.approval_biz - old_biz,
+        "biz_drivers": [
+            f"Zoning Grid: {biz_shift:+d}%",
+            f"Policy Impact: {'+6%' if 'Industrial' in st.session_state.active_policy else ('-3%' if 'Green' in st.session_state.active_policy else '0%')}",
+            f"Deficit Penalty: {'-12%' if old_budget < 0 else 'None'}",
+            f"Event Penalty: {('-4%' if event_type in ['drought', 'heatwave'] else '0%')}",
+            f"Protest Effects: {'-5%' if st.session_state.approval_res < 40 else 'None'}"
+        ],
         "res_curr": st.session_state.approval_res,
         "res_diff": st.session_state.approval_res - old_res,
+        "res_drivers": [
+            f"Zoning Grid: {res_shift:+d}%",
+            f"Policy Impact: {'-6%' if 'Water' in st.session_state.active_policy else '0%'}",
+            f"Deficit Penalty: {'-8%' if old_budget < 0 else 'None'}",
+            f"Event Penalty: {'-4' if event_type in ['drought', 'heatwave'] else '0%'}",
+            f"Water Penalty: {'-15%' if st.session_state.water_supply < 0 else 'None'}",
+            f"Protest Effects: {'-5%' if st.session_state.approval_env < 40 else 'None'}"
+        ],
         "credit": st.session_state.credit_rating
     }
     st.session_state.viewing_summary = True
