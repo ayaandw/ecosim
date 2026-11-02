@@ -6,6 +6,7 @@ st.set_page_config(page_title = "EcoSim, a Climate Simulation Game", page_icon =
 
 if "initialized" not in st.session_state:
     st.session_state.budget = 15_000_000
+    st.session_state.debt = 0
     st.session_state.water_supply = 5_000
     st.session_state.temp_reduction = 0.0
     st.session_state.solar_kwh = 0
@@ -17,6 +18,9 @@ if "initialized" not in st.session_state:
     st.session_state.active_policy = "None"
     st.session_state.game_over = False
     st.session_state.victory = False
+    st.session_state.show_tutorial = True
+    st.session_state.viewing_summary = False
+    st.session_state.latest_summary = {}
     st.session_state.event_log = ["Simulation started! Balance the environment, business, and civilian interests."]
     st.session_state.history = [{"Year": 2026, "Budget": 15_000_000, "Env Approval": 70, "Biz Approval": 60, "Res Approval": 65}]
     st.session_state.grid = {i: {"type": "Empty Plot", "upkeep_cost": 0, "upkeep_water": 0} for i in range (1, 10)}
@@ -25,10 +29,29 @@ if "initialized" not in st.session_state:
 st.title("🏙️ EcoSim, an Urban Climate Management Simulation")
 st.markdown("Manage city budgets, infrastructure upkeep, and climate challenges under strict public scrutiny.")
 
+if st.session_state.show_tutorial:
+    with st.expander("📖 **Welcome Mayor! Click here for your Tutorial**", expanded = True):
+        st.markdown("""
+        Welcome to **EcoSim**, a city management strategy game where, above all, you must manage your city's climate.
+        * **Your Goal:** Survive a 10-year mayoral term without letting any demographic group's approval fall to 0% or driving the city into bankruptcy.
+        * **The 3 Groups:**
+            * 🌿 **Environmentalists:** Demand parks, solar energy, and heavy heat reduction.
+            * 💼 **Business Leaders:** Demand industrial and commercial development for tax revenue.
+            * 🏡 **Working Class Residents:** Care about water security, balanced costs, and stable city finances.
+        * **Group Interactions:** Keep groups happy (>85%) for major bonuses, and face protests if they drop below 40%.
+        * Remember: You can't keep everyone happy with one policy. You have to make tough choices
+        """)
+        if st.button("✅ Got it! Start my term"):
+            st.session_state.show_tutorial = False
+            st.rerun()
+        st.stop()
+
 st.sidebar.header("📊 City Finances & Stats")
 st.sidebar.metric("💰 Budget", f"${st.session_state.budget:,.0f}")
+if st.session_state.debt > 0:
+    st.sidebar.metric("📉 Outstanding Debt", f"${st.session_state.debt:,.0f}", delta_color = "inverse")
 st.sidebar.metric("🏷️ Credit Rating", st.session_state.credit_rating)
-st.sidebar.metric("💧 Water Reserves", f"{st.session_state.water_supply} Units")
+st.sidebar.metric("💧 Water Reserves", f"{st.session_state.water_supply:,} Units")
 
 st.sidebar.markdown("---")
 st.sidebar.header("👥 Approval by Demographic")
@@ -43,8 +66,48 @@ st.sidebar.metric("⚡ Clean Energy", f"{st.session_state.solar_kwh} kWh")
 st.sidebar.markdown(f"**Current Year:** {2026 + st.session_state.turn}")
 st.sidebar.markdown(f"**Active Policy:** {st.session_state.active_policy}")
 
+if st.session_state.viewing_summary:
+    sum_data = st.session_state.latest_summary
+    st.markdown("---")
+    st.error(f"📰 **YEAR {sum_data['year']} REVIEW: CITY HALL GAZETTE")
+    st.info(f"**Annual Event:** {sum_data['event_desc']}")
+
+    st.markdown(f"**Major Group Events:** \n {sum_data['faction_msg']}")
+
+    with st.expander(" **View Itemized Municipal Budget Invoice**", expanded = True):
+        st.markdown(f"• **Base Revenue:** +$3,500,000")
+        st.markdown(f"• **Building/Asset Revenue:** +${sum_data['asset_income']:,.0f}")
+        st.markdown(f"• **Solar Energy Credits:** +${sum_data['solar_income']:,.0f}")
+        st.markdown(f"• **Infrastructure Upkeep Costs:** -${sum_data['upkeep_cost']:,.0f}")
+        if sum_data['interest_paid'] > 0:
+            st.markdown(f"• **Debt & Deficit Interest Penalty:** -${sum_data['interest_paid']:,.0f}")
+        st.markdown(f"---")
+        st.markdown(f"**Net Budget Shift this Year:** **${sum_data['budget_diff']:,.0f}**")
+
+    col_a, col_b, col_c, col_d = st.columns(4)
+    col_a.metric("💰 Net Budget Change", f"${sum_data['budget_diff']:,.0f}")
+    col_b.metric("🌿 Environmentalist Approval", f"{sum_data['env_curr']}%", f"{sum_data['env_diff']}%")
+    col_c.metric("💼 Business Approval", f"{sum_data['biz_curr']}%", f"{sum_data['biz_diff']}%")
+    col_d.metric("🏡 Resident Approval", f"{sum_data['biz_curr']}%", f"{sum_data['biz_diff']}%")
+
+    if st.button("➡️ Close Review & Proceed"):
+        st.session_state.viewing_summary = False
+        st.rerun()
+    st.stop()
+
 st.subheader("📢 City Hall Announcements")
 st.info(st.session_state.event_log[-1])
+
+with st.expander("Bond and Emergency Loan Office"):
+    st.markdown("Need quick cash? Issue bonds to introduce cash into your budget, but be aware of compouding interest and credit rating downgrades.")
+    loan_amount = st.selectbox("Select amount", [5_000_000, 10_000_000, 20_000_000], format_func = lambda x: f"${x:,.0f}")
+    if st.button("Release to Circulation"):
+        st.session_state.budget += loan_amount
+        st.session_state.debt += loan_amount
+        st.session_state.approval_biz += 3
+        st.session_state.approval_res -= 5
+        st.success(f"Issued ${loan_amount:,.0f} in bonds!")
+        st.rerun()
 
 st.subheader("🏛️ Municipal Policies (Choose 1 per Term)")
 policy_options = [
@@ -165,6 +228,11 @@ elif st.session_state.victory:
             del st.session_state[key]
         st.rerun()
 elif st.button("⏩ Advance to Next Year"):
+    old_budget = st.session_state.budget
+    old_env = st.session_state.approval_env
+    old_biz = st.session_state.approval_biz
+    old_res = st.session_state.approval_res
+
     st.session_state.turn += 1
 
     total_upkeep_cost = sum(t["upkeep_cost"] for t in st.session_state.grid.values())
@@ -203,6 +271,34 @@ elif st.button("⏩ Advance to Next Year"):
     
     st.session_state.budget += net_cash_flow
     st.session_state.water_supply += (yearly_water_gain - total_upkeep_water)
+
+    faction_msg = ""
+
+    faction_messages = []
+
+    if st.session_state.approval_env >= 85:
+        st.session_state.budget += 1_000_000
+        faction_messages.append("Environmentalists staged a clean-energy charity auction (+$1M)!")
+    elif st.session_state.approval_env < 40:
+        st.session_state.approval_res -= 5
+        faction_messages.append("Environmentalists are staging massive climate protests (-5% resident morale).")
+
+    if st.session_state.approval_biz >= 85:
+        st.session_state.budget += 1_500_500
+        faction_messages.append("Business leaders invested heavily in bonds (+$1.5M)!")
+    elif st.session_state.approval_biz < 40:
+        yearly_income -= 1_000_000
+        faction_messages.append(" Chamber of Commerce initiated a corporate tax strike ($1M).")
+
+    if st.session_state.approval_res >= 85:
+        st.session_state.water_supply += 500
+        faction_messages.append("Residents launched a community-led water saving campaign (+500 Water)!")
+    elif st.session_state.approval_res < 40:
+        st.session_state.approval_env -= 5
+        st.session_state.approval_biz -= 5
+        faction_messages.append("Working class citizens are rioting over costs in the city (-5 of all approvals).")
+
+    faction_msg = "  \n".join(faction_messages) if faction_messages else "No major group events this year."
 
     if st.session_state.budget > 10_000_000:
         st.session_state.credit_rating = "AAA"
@@ -257,6 +353,26 @@ elif st.button("⏩ Advance to Next Year"):
         st.session_state.game_over = True
     elif st.session_state.turn >= 10:
         st.session_state.victory = True
+
+    st.session_state.latest_summary = {
+        "year": 2026 + st.session_state.turn,
+        "event_desc": event_desc,
+        "faction_msg": faction_msg,
+        "budget_diff": st.session_state.budget - old_budget,
+        "base_income": 3_500_000,
+        "asset_income": asset_income,
+        "solar_income": st.session_state.solar_kwh * 400,
+        "upkeep_cost": total_upkeep_cost,
+        "interest_paid": (abs(old_budget) * 0.08) if old_budget < 0 or st.session_state.debt > 0 else 0,
+        "env_curr": st.session_state.approval_env,
+        "env_diff": st.session_state.approval_env - old_env,
+        "biz_curr": st.session_state.approval_biz,
+        "biz_diff": st.session_state.approval_biz - old_biz,
+        "res_curr": st.session_state.approval_res,
+        "res_diff": st.session_state.approval_res - old_res,
+        "credit": st.session_state.credit_rating
+    }
+    st.session_state.viewing_summary = True
 
     st.session_state.history.append({
         "Year": 2026 + st.session_state.turn,
