@@ -5,6 +5,12 @@ import random
 st.set_page_config(page_title = "EcoSim, a Climate Simulation Game", page_icon = "🌱", layout = "wide")
 
 if "initialized" not in st.session_state:
+    st.session_state.game_phase = "setup" #setup, tutorial, playing, game over, victory
+    st.session_state.selected_goals = [
+        {"name": "Protect the Climate", "desc": "Default goal, depends on heat reduction and environmental approval"},
+        {"name": "", "desc": ""},
+        {"name": "", "desc": ""}
+    ]
     st.session_state.budget = 15_000_000
     st.session_state.debt = 0
     st.session_state.water_supply = 5_000
@@ -29,6 +35,80 @@ if "initialized" not in st.session_state:
 
 st.title("🏙️ EcoSim, an Urban Climate Management Simulation")
 st.markdown("Manage city budgets, infrastructure upkeep, and climate challenges under strict public scrutiny.")
+
+if st.session_state.game_phase == "setup":
+    st.markdown("---")
+    st.subheader("Governing goals will guide you as you play. ➡️")
+    st.markdown("Before taking oath, select your administration's core priorities. A climate goal is permanently locked in, but you must choose 2 other mandates.")
+
+    goals = [
+        {"name": "Fiscal Conservative", "desc": "Maintain >20M net worth by end of term"},
+        {"name": "Water Security", "desc": "Keep water reserves above 2000 units"},
+        {"name": "Pro-Growth Administration", "desc": "Maximize business approval to 80%"},
+        {"name": "Climate Activist", "desc": "Achieve 2.0°C heat island reduction"},
+        {"name": "Population Peacemaker", "desc": "Keep approvals of all groups above 70%"}
+    ]
+
+    col_g1, col_g2, col_g3 = st.columns(3)
+
+    with col_g1:
+        st.markdown("### Goal 1 ➡️")
+        st.info("**Protect the Climate**\n\n(Locked Mandatory Goal)")
+
+    with col_g2:
+        st.markdown("### Goal 2 ➡️")
+        goal_choice_2 = st.selectbox(
+            "Select Secondary Goal",
+            goals,
+            format_func = lambda g: f"{g['name']}\n | {g['desc']}",
+            key = "setup_goal_2"
+        )
+
+    with col_g3:
+        st.markdown("### Goal 3 ➡️")
+        available_3 = [g for g in goals if g["name"] != goal_choice_2["name"]]
+        goal_choice_3 = st.selectbox(
+            "Select Tertiary Goal",
+            available_3,
+            format_func = lambda g: f"{g['name']}\n | {g['desc']}",
+            key = "setup_goal_3"
+        )
+
+    st.markdown("---")
+    col_btn1, col_btn2 = st.columns(2)
+
+    if col_btn1.button("Random Council-Appointed Goals ➡️"):
+        rand_pick = random.sample(goals, 2)
+        st.session_state.selected_goals = [
+            {"name": "Protect the Climate", "desc": "Achieve climate stability"},
+            rand_pick[0],
+            rand_pick[1]
+        ]
+        st.session_state.game_phase = "playing"
+        st.rerun()
+
+    if col_btn2.button("Let's Go! ➡️"):
+        st.session_state.selected_goals = [
+            {"name": "Protect the Climate", "desc": "Achieve climate stability"},
+            goal_choice_2,
+            goal_choice_3
+        ]
+        st.session_state.game_phase = "playing"
+        st.rerun()
+
+    st.stop()
+
+    g1 = st.session_state.selected_goals[0]["name"] if len(st.session_state.selected_goals > 0) else "Protect the Climate"
+    g2 = st.session_state.selected_goals[1]["name"] if len(st.session_state.selected_goal > 1) else "Fiscal Conservative"
+    g3 = st.session_state.selected_goals[2]["name"] if len(st.session_state.selected_goal > 2) else "Water Security"
+
+    st.markdown(
+        f"**Active Governing Goals:**"
+        f"**Goal 1:** {g1}"
+        f"**Goal 2:** {g2}"
+        f"**Goal 3:** {g3}"
+    )
+st.markdown("---")
 
 if st.session_state.show_tutorial:
     st.markdown("---")
@@ -127,6 +207,18 @@ st.sidebar.metric("🌡️ Heat Island Reduction", f"{st.session_state.temp_redu
 st.sidebar.metric("⚡ Clean Energy", f"{st.session_state.solar_kwh} kWh")
 st.sidebar.markdown(f"**Current Year:** {2026 + st.session_state.turn}")
 st.sidebar.markdown(f"**Active Policy:** {st.session_state.active_policy}")
+
+st.sidebar.markdown("---")
+st.sidebar.header("🎯 Active Governing Goals")
+
+for idx, goal in enumerate(st.session_state.selected_goals, start = 1):
+    if isinstance(goal, dict):
+        g_name = goal.get("name", "")
+        g_desc = goal.get("desc", "")
+        st.sidebar.markdown(f"**Goal {idx}:** {g_name}")
+        st.sidebar.caption(f"└ {g_desc}")
+    else:
+        st.sidebar.markdown(f"**Goal {idx}:** {goal}")
 
 if st.session_state.viewing_summary:
     sum_data = st.session_state.latest_summary
@@ -323,14 +415,47 @@ elif st.session_state.victory:
     col_g2.metric(" Fiscal Grade", grade_fiscal, f"${net_worth:,.0f} Net Worth")
     col_g3.metric(" Governance Grade", grade_politics, f"{avg_approval:.1f}% Avg Approval")
 
-    st.markdown("### **Demographic Breakdown**")
+    st.markdown("###👥 **Demographic Approval Breakdown ➡️**")
     if st.session_state.approval_env < 50:
-        st.warning(" **Environmental Critique:** Your administration prioritized immediate revenue over climate conservation. Your city's carbon footprint remains high.")
+        st.warning("⚠️ **Environmental Critique:** Your administration prioritized immediate revenue over climate conservation. Your city's carbon footprint remains high.")
     if st.session_state.approval_biz < 50:
-        st.warning(" **Commercial Critique:** Business leaders feel over-regulated and taxed, stifling commercial expansion.")
+        st.warning("💼 **Commercial Critique:** Business leaders feel over-regulated and taxed, stifling commercial expansion.")
     if st.session_state.approval_res < 50:
-        st.warning(" **Civilian Critique:** Working-class residents bore the brunt of negative impacts from your policies.")
+        st.warning("🏡 **Civilian Critique:** Working-class residents bore the brunt of negative impacts from your policies.")
 
+    st.markdown("###🎯 **Governing Goals Evaluation**")
+    for idx, goal in enumerate(st.session_state.selected_goals, start = 1):
+        goal_name = goal.get("name", "")
+        goal_desc = goal.get("desc", "")
+        achieved = False
+        status_msg = ""
+
+        if "Protect the Climate" in goal_name:
+            achieved = st.session_state.temp_reduction >= 1.5 and st.session_state.approval_env >= 66
+            status_msg = f"Achieved {st.session_state.temp_reduction:.1f}°C / target 1.5°C and {st.session_state.approval_env:,}% / target 66%"
+        elif "Fiscal Conservative" in goal_name:
+            achieved = net_worth >= 20_000_000
+            status_msg = f"Finished with ${net_worth:,.0f} net worth / target $20,000,000"
+        elif "Water Security" in goal_name:
+            achieved = st.session_state.water_supply >= 2000
+            status_msg = f"Finished with {st.session_state.water_supply:,} units / target 2,000 units"
+        elif "Pro-Growth Administration" in goal_name:
+            achieved = st.session_state.approval_biz >= 80
+            status_msg = f"Business approval hit {st.session_state.approval_biz}% / target 80%"
+        elif "Climate Activist" in goal_name:
+            achieved = st.session_state.temp_reduction >= 2.0
+            status_msg = f"Achieved {st.session_state.temp_reduction:.1f}°C / target 2°C"
+        elif "Population Peacemaker" in goal_name:
+            achieved = (st.session_state.approval_env >= 70 and
+                        st.session_state.approval_biz >= 70 and
+                        st.session_state.approval_res >= 70)
+            status_msg = f"Min Approval: {min(st.session_state.approval_env, st.session_state.approval_biz, st.session_state.approval_res)}% / target 70%"
+
+        if achieved:
+            st.success(f"✅ **Goal {idx}: {goal_name}** PASSED!\n\n*{status_msg}")
+        else:
+            st.error(f"❌ **Goal {idx}: {goal_name}** FAILED!\n\n*{status_msg}*")
+    
     if st.button("🔄 Play Again"):
         for key in list(st.session_state.keys()):
             del st.session_state[key]
