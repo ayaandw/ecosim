@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import random
+from components import ASSETS, goals
 
 st.set_page_config(page_title = "EcoSim, a Climate Simulation Game", page_icon = "🌱", layout = "wide")
 
@@ -62,14 +63,6 @@ if st.session_state.game_phase == "setup":
     st.markdown("---")
     st.subheader("Governing goals will guide you as you play. ➡️")
     st.markdown("Before taking oath, select your administration's core priorities. A climate goal is permanently locked in, but you must choose 2 other mandates.")
-
-    goals = [
-        {"name": "Fiscal Conservative", "desc": "Maintain >20M net worth by end of term"},
-        {"name": "Water Security", "desc": "Keep water reserves above 2000 units"},
-        {"name": "Pro-Growth Administration", "desc": "Maximize business approval to 80%"},
-        {"name": "Climate Activist", "desc": "Achieve 2.0°C heat island reduction"},
-        {"name": "Population Peacemaker", "desc": "Keep approvals of all groups above 70%"}
-    ]
 
     col_g1, col_g2, col_g3 = st.columns(3)
 
@@ -308,64 +301,17 @@ policy_options = [
 selected_policy = st.selectbox("Select Active Policy", policy_options, key = "policy_select")
 st.session_state.active_policy = selected_policy
 
-ASSETS = {
-    "🌳 Urban Park": {
-        "cost": 2_500_000, "water_cost": 400, "upkeep_cost": 450_000, "upkeep_water":100, 
-        "heat_mod": 0.6, "solar_mod": 0, "income": 0,
-        "env_mod": 5, "biz_mod": -2, "res_mod": 3,
-        "desc_cost": "Cost: $2.5M | Water: 400 Units",
-        "desc_upkeep": "Upkeep: $450K/yr | Water Use: 100/yr",
-        "desc_effect": "Effect: -0.6°C Heat | +5 Env, -2 Biz, +3 Res Approval"
-        },
-    "☀️ Solar Array": {
-        "cost": 5_000_000, "water_cost": 0, "upkeep_cost": 200_000, "upkeep_water": 0,
-        "heat_mod": 0.0, "solar_mod": 1200, "income": 600_000,
-        "env_mod": 4, "biz_mod": -2, "res_mod": 2,
-        "desc_cost": "Cost: $5.0M | Water: 0 Units",
-        "desc_upkeep": "Upkeep: $800K/yr | Clean Energy: 1,200 kWh/yr",
-        "desc_effect": "Effect: +600K/yr Income | +4 Env, -2 Biz, +2 Res Approval"
-        },
-    "💧 Eco Reservoir": {
-        "cost": 7_500_000, "water_cost": 0, "upkeep_cost": 800_000, "upkeep_water":-1_500, 
-        "heat_mod": 0.2, "solar_mod":0, "income": 0,
-        "env_mod": 2, "biz_mod": -1, "res_mod": 6,
-        "desc_cost": "Cost: $7.5M | Water: 0 Units",
-        "desc_upkeep": "Upkeep: $800K/yr | Yields Water",
-        "desc_effect": "Effect: +1,500 Water/yr | +2 Env, -1 Biz, +6 Res Approval"
-        },
-    "🏭 Industrial Factory": {
-        "cost": 4_000_000, "water_cost": 600, "upkeep_cost": 500_000, "upkeep_water": 400, 
-        "heat_mod": -0.8, "solar_mod": 0, "income": 3_200_000,
-        "env_mod": -8, "biz_mod": 7, "res_mod": -4,
-        "desc_cost": "Cost: $4.0M | Water: 600 Units",
-        "desc_upkeep": "Upkeep: $500K/yr | Water Use: 400/yr",
-        "desc_effect": "Effect: +$3.2M/yr Income, +0.8°C Heat | -8 Env, +7 Biz, -4 Res Approval"
-        },
-    "🏢 Commercial Block": {
-        "cost": 6_000_000, "water_cost": 800, "upkeep_cost": 700_000, "upkeep_water": 300,
-        "heat_mod": -0.4, "solar_mod": 0, "income": 2_100_000,
-        "env_mod": -4, "biz_mod": 5, "res_mod": -2,
-        "desc_cost": "Cost: $6.0M | Water: 800 Units",
-        "desc_upkeep": "Upkeep: $700K/yr | Water Use: 300/yr",
-        "desc_effect": "Effect: +2.1M/yr Income, +0.4°C Heat | -4 Env, +5 Biz, -2 Res Approval"
-        }
-}
-
 st.markdown("---")
-col_title, col_toggle = st.columns([3, 1])
-with col_title:
-    st.subheader("🗺️ City Zoning Grid (4x4)")
+btn_text = "❌ Close Build Mode" if st.session_state.build_mode_active else "🔨 Open Build Mode"
 
-with col_toggle:
-    # st.write("")
-    if not st.session_state.build_mode_active:
-        if st.button("🔨 Open Build Mode", key = "toggle_build_on"):
-            st.session_state.build_mode_active = True
-            st.rerun()
-    elif st.button("❌ Close Build Mode", key = "toggle_build_off"):
-        st.session_state.build_mode_active = False
+col_header, col_btn = st.columns([3, 1])
+with col_header:
+    st.subheader("🗺️ City Zoning Grid (4x4))")
+
+with col_btn:
+    if st.button(btn_text, key = "toggle_build_mode_main", type = "primary" if not st.session_state.build_mode_active else "secondary", use_container_width = True):
+        st.session_state.build_mode_active = not st.session_state.build_mode_active
         st.rerun()
-
 
 if "active_build_tile" not in st.session_state:
     st.session_state.active_build_tile = None
