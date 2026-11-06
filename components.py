@@ -15,7 +15,7 @@ ASSETS = {
         "desc_upkeep": "Upkeep: $800K/yr | Clean Energy: 1,200 kWh/yr",
         "desc_effect": "Effect: +$600K/yr | +4 Env, -2 Biz, +2 Res Approval"
     },
-    "Eco Reservoir": {
+    "💧 Eco Reservoir": {
         "cost": 7_500_000, "water_cost": 0, "upkeep_cost": 800_000, "upkeep_water":-1_500,
         "heat_mod": 0.2, "solar_mod": 0, "income": 0,
         "env_mod": 2, "biz_mod": -1, "res_mod": 6,
@@ -31,7 +31,7 @@ ASSETS = {
         "desc_upkeep": "Upkeep: $500K/yr | Water: 400/yr",
         "desc_effect": "Effect: +$3.2M/yr, +0.8°C Heat | -8 Env, +7 Biz, -4 Res Approval"
     },
-    "Commercial Block": {
+    "🏢 Commercial Block": {
         "cost":6_000_000, "water_cost": 800, "upkeep_cost": 700_000, "upkeep_water": 300,
         "heat_mod": -0.4, "solar_mod": 0, "income": 2_100_000,
         "env_mod": -4, "biz_mod": 5, "res_mod": -2,
