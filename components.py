@@ -48,3 +48,14 @@ goals = [
     {"name": "Climate Activist", "desc": "Achieve 2.0°C heat island reduction by end of term"},
     {"name": "Population Peacemaker", "desc": "End with approvals of all groups >70%"}
 ]
+
+def get_neighbors(tile_id):
+    """Returns a list of neighboring IDs for a given slot"""
+    row = (tile_id - 1) // 4
+    col = (tile_id - 1) % 4
+    neighbors = []
+    if row > 0: neighbors.append(tile_id - 4)
+    if row < 3: neighbors.append(tile_id +4)
+    if col > 0: neighbors.append(tile_id - 1)
+    if col < 3: neighbors.append(tile_id + 1)
+    return neighbors

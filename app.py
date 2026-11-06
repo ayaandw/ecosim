@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import random
-from components import ASSETS, goals
+from components import ASSETS, goals, get_neighbors
 from screens import render_setup_screen, render_tutorial_screen
 
 st.set_page_config(page_title = "EcoSim, a Climate Simulation Game", page_icon = "🌱", layout = "wide")
@@ -34,7 +34,7 @@ if "initialized" not in st.session_state:
     ]
     st.session_state.budget = 15_000_000
     st.session_state.debt = 0
-    st.session_state.water_supply = 5_000
+    st.session_state.water = 5_000
     st.session_state.temp_reduction = 0.0
     st.session_state.solar_kwh = 0
     st.session_state.turn = 0
@@ -75,7 +75,7 @@ st.sidebar.metric("💰 Budget", f"${st.session_state.budget:,.0f}")
 if st.session_state.debt > 0:
     st.sidebar.metric("📉 Outstanding Debt", f"${st.session_state.debt:,.0f}", delta_color = "inverse")
 st.sidebar.metric("🏷️ Credit Rating", st.session_state.credit_rating)
-st.sidebar.metric("💧 Water Reserves", f"{st.session_state.water_supply:,} Units")
+st.sidebar.metric("💧 Water Reserves", f"{st.session_state.water:,} Units")
 
 st.sidebar.markdown("---")
 st.sidebar.header("👥 Approval by Demographic")
@@ -238,13 +238,13 @@ for i, tile_id in enumerate(st.session_state.grid.keys()):
 
             if st.button(f"🏗️ Construct ({chosen_bp.split()[1]})", key = f"build_plot_{tile_id}"):
                 will_be_deficit = (st.session_state.budget - b_data["cost"]) < 0
-                if st.session_state.water_supply < b_data["water_cost"]:
+                if st.session_state.water < b_data["water_cost"]:
                     st.error("Insufficient water!")
                 elif will_be_deficit and st.session_state.budget + 25_000_000 < b_data["cost"]:
                     st.error("Budget too low for deficit!")
                 else:
                     st.session_state.budget -= b_data["cost"]
-                    st.session_state.water_supply -= b_data["water_cost"]
+                    st.session_state.water -= b_data["water_cost"]
                     st.session_state.temp_reduction += b_data["heat_mod"]
                     st.session_state.solar_kwh += b_data["solar_mod"]
                     st.session_state.grid[tile_id] = {
@@ -292,11 +292,11 @@ if st.session_state.active_build_tile is not None:
         if st.button("✅ Confirm Blueprint Construction", key = "confirm_build_btn"):
             if not confirm_deficit and will_be_deficit:
                 st.error("Authorize debt first!")
-            elif st.session_state.water_supply < asset_data["water_cost"]:
+            elif st.session_state.water < asset_data["water_cost"]:
                 st.error("Insufficient water!")
             else:
                 st.session_state.budget -= asset_data["cost"]
-                st.session_state.water_supply -= asset_data["water_cost"]
+                st.session_state.water -= asset_data["water_cost"]
                 st.session_state.temp_reduction += asset_data["heat_mod"]
                 st.session_state.solar_kwh += asset_data["solar_mod"]
                 st.session_state.grid[t_id] = {
@@ -357,8 +357,8 @@ elif st.session_state.victory:
             achieved = net_worth >= 20_000_000
             status_msg = f"Finished with ${net_worth:,.0f} net worth / target $20,000,000"
         elif "Water Security" in goal_name:
-            achieved = st.session_state.water_supply >= 2000
-            status_msg = f"Finished with {st.session_state.water_supply:,} units / target 2,000 units"
+            achieved = st.session_state.water >= 2000
+            status_msg = f"Finished with {st.session_state.water:,} units / target 2,000 units"
         elif "Pro-Growth Administration" in goal_name:
             achieved = st.session_state.approval_biz >= 80
             status_msg = f"Business approval hit {st.session_state.approval_biz}% / target 80%"
@@ -386,6 +386,35 @@ elif st.button("⏩ Advance to Next Year"):
     old_env = st.session_state.approval_env
     old_biz = st.session_state.approval_biz
     old_res = st.session_state.approval_res
+
+    synergy_env = 0
+    synergy_biz = 0
+    synergy_res = 0
+    synergy_messages = []
+
+    for tile_id, tile in st.session_state.grid.items():
+        t_type = tile["type"]
+        if t_type == "Empty Plot":
+            continue
+
+        neighbors = get_neighbors(tile_id)
+        neighbor_types = [st.session_state.grid[n]["type"] for n in neighbors]
+
+        if "Urban Park" in t_type:
+            if any("Commercial" in n for n in neighbor_types):
+                synergy_res += 2
+                synergy_messages.append(f"Park (Plot {tile_id} boosts nearby commerce (+2 Res))")
+
+        if "Industrial Factory" in t_type:
+            if any("Park" in n or "Reservoir" in n for n in neighbor_types):
+                synergy_env -= 3
+                synergy_messages.append(f"Factory pollution next to green space on Plot {tile_id} (-3 Env)")
+
+    st.session_state.approval_env += synergy_env
+    st.session_state.approval_res += synergy_res
+
+    if synergy_messages:
+        st.session_state.event_log.append(" | ".join(synergy_messages))
 
     st.session_state.turn += 1
 
@@ -424,10 +453,9 @@ elif st.button("⏩ Advance to Next Year"):
         st.session_state.approval_res -= 8
     
     st.session_state.budget += net_cash_flow
-    st.session_state.water_supply += (yearly_water_gain - total_upkeep_water)
+    st.session_state.water += (yearly_water_gain - total_upkeep_water)
 
     faction_msg = ""
-
     faction_messages = []
 
     if st.session_state.approval_env >= 85:
@@ -445,7 +473,7 @@ elif st.button("⏩ Advance to Next Year"):
         faction_messages.append(" Chamber of Commerce initiated a corporate tax strike ($1M).")
 
     if st.session_state.approval_res >= 85:
-        st.session_state.water_supply += 500
+        st.session_state.water += 500
         faction_messages.append("Residents launched a community-led water saving campaign (+500 Water)!")
     elif st.session_state.approval_res < 40:
         st.session_state.approval_env -= 5
@@ -469,33 +497,61 @@ elif st.button("⏩ Advance to Next Year"):
     st.session_state.approval_biz = max(0, min(100, st.session_state.approval_biz))
     st.session_state.approval_res = max(0, min(100, st.session_state.approval_res))
 
-    event_roll = random.choice([
-        ("normal", "Stable year for the city."),
-        ("drought", "Severe Drought! Water reserves drained heavily (-800 Units)"),
-        ("grant", "Federal Grant Awarded! +$2.5M added to budget."),
-        ("heatwave", "Intense Heatwave! Citizens are suffering (-15% approval)."),
+    active_tile_types = [t["type"] for t in st.session_state.grid.values() if t["type"]]
+    g_events = [("normal", "Stable year for the city.")]
+
+    if any("Industrial Factory" in t for t in active_tile_types):
+        g_events.append(("factory_strike", "⚠️ Labor Strike! Industrial workers demand salary increase (-$800K, -4% Biz Approval)"))
+        g_events.append(("toxic_leak", "⚠️ Environmental Violation! Toxic runoff found (-$1.2M cleanup, -5% Env Approval)"))
+
+    if any("Solar Array" in t for t in active_tile_types):
+        g_events.append(("solar_breakthrough", "☀️ Solar Power Breakthrough! Increased clean energy output! (+300 kWh, +3% Env Approval)"))
+
+    if any("Eco Reservoir" in t for t in active_tile_types):
+        g_events.append(("reservoir_overflow", "💧 Heavy Rains Fill Reservoirs! Water reserves maxxed (+1,200 Units)"))
+
+    if any("Urban park" in t for t in active_tile_types):
+        g_events.append(("community_festival", "🌳 City Green Festival! Citizen morale increased (+4% Res Approval)"))
+
+    g_events.extend([
+        ("drought", "🌵 Severe Drought! Water reserves drained heavily (-800 Units, -4 Res & Env Approval).")
+        ("grant", "🏛️ Federal Grant Awarded! +$2.5M added to budget, +4 Biz Approval.")
+        ("heatwave", "🔥 Record Heatwave! Citizens are suffering (-7% approval for all).")
     ])
 
-    event_type, event_desc = event_roll
-    if event_type == "drought":
-        st.session_state.water_supply -= 800
-        st.session_state.approval_res -= 4
-        st.session_state.approval_env -= 4
+    event_type, event_desc = random.choice(g_events)
+
+    if event_type == "factory_strike":
+        st.session_state.budget -= 800_000
         st.session_state.approval_biz -= 4
+    elif event_type == "toxic_leak":
+        st.session_state.budget -= 1_200_000
+        st.session_state.approval_env -= 5
+    elif event_type == "solar_breakthrough":
+        st.session_state.solar_kwh += 300
+        st.session_state.approval_env += 3
+    elif event_type == "reservoir_overflow":
+        st.session_state.water += 1200
+    elif event_type == "community_festival":
+        st.session_state.approval_res += 4
+    elif event_type == "drought":
+        st.session_state.water -= 800
+        st.session_state.approavl_res -= 4
+        st.session_state.approval_env -= 4
     elif event_type == "grant":
         st.session_state.budget += 2_500_000
         st.session_state.approval_biz += 4
     elif event_type == "heatwave":
         st.session_state.approval_env -= 7
+        st.session_state.approval_biz -=7
         st.session_state.approval_res -= 7
-        st.session_state.approval_biz -= 7
 
     st.session_state.event_log.append(f"Year {st.session_state.turn}: {event_desc}")
 
     if st.session_state.budget < 0:
         st.session_state.approval_res -= 8
         st.session_state.approval_biz -= 12
-    if st.session_state.water_supply < 0:
+    if st.session_state.water < 0:
         st.session_state.approval_res -= 15
     if st.session_state.temp_reduction < 1.5:
         st.session_state.approval_env -= 10
@@ -543,7 +599,7 @@ elif st.button("⏩ Advance to Next Year"):
             f"Policy Impact: {'-6%' if 'Water' in st.session_state.active_policy else '0%'}",
             f"Deficit Penalty: {'-8%' if old_budget < 0 else 'None'}",
             f"Event Penalty: {'-4' if event_type in ['drought', 'heatwave'] else '0%'}",
-            f"Water Penalty: {'-15%' if st.session_state.water_supply < 0 else 'None'}",
+            f"Water Penalty: {'-15%' if st.session_state.water < 0 else 'None'}",
             f"Protest Effects: {'-5%' if st.session_state.approval_env < 40 else 'None'}"
         ],
         "credit": st.session_state.credit_rating
@@ -553,7 +609,7 @@ elif st.button("⏩ Advance to Next Year"):
     st.session_state.history.append({
         "Year": 2026 + st.session_state.turn,
         "Budget": st.session_state.budget,
-        "Water": st.session_state.water_supply,
+        "Water": st.session_state.water,
         "Env Approval": st.session_state.approval_env,
         "Biz Approval": st.session_state.approval_biz,
         "Res Approval": st.session_state.approval_res
