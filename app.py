@@ -3,6 +3,8 @@ import pandas as pd
 import random
 from components import ASSETS, goals, get_neighbors
 from screens import render_setup_screen, render_tutorial_screen
+from districts import DISTRICTS, render_districts
+from research import TREE, render_research
 
 st.set_page_config(page_title = "EcoSim, a Climate Simulation Game", page_icon = "🌱", layout = "wide")
 
@@ -168,150 +170,160 @@ policy_options = [
 selected_policy = st.selectbox("Select Active Policy", policy_options, key = "policy_select")
 st.session_state.active_policy = selected_policy
 
-st.markdown("---")
-btn_text = "❌ Close Build Mode" if st.session_state.build_mode_active else "🔨 Open Build Mode"
+tab_grid, tab_districts, tab_research = st.tabs(["🗺️ City Grid", "🏛️ Districts", "🔬 R&D Lab"])
 
-col_header, col_btn = st.columns([3, 1])
-with col_header:
-    st.subheader("🗺️ City Zoning Grid (4x4))")
 
-with col_btn:
-    if st.button(btn_text, key = "toggle_build_mode_main", type = "primary" if not st.session_state.build_mode_active else "secondary", use_container_width = True):
-        st.session_state.build_mode_active = not st.session_state.build_mode_active
-        st.rerun()
+with tab_grid:
+    st.markdown("---")
+    btn_text = "❌ Close Build Mode" if st.session_state.build_mode_active else "🔨 Open Build Mode"
 
-if "active_build_tile" not in st.session_state:
-    st.session_state.active_build_tile = None
+    col_header, col_btn = st.columns([3, 1])
+    with col_header:
+        st.subheader("🗺️ City Zoning Grid (4x4))")
 
-if st.session_state.build_mode_active:
-    st.info("🏗️ **BUILD MODE ACTIVE:** Select a blueprint from your hotbar below, then click **[Construct]** on any empty plot!")
-
-    hb_cols = st.columns(len(ASSETS) + 1)
-    asset_keys = list(ASSETS.keys())
-
-    for i, a_key in enumerate(asset_keys):
-        a_data = ASSETS[a_key]
-        is_selected = (st.session_state.selected_blueprint == a_key)
-        btn_label = f"✨ [{a_key}]" if is_selected else a_key
-
-        with hb_cols[i]:
-            if st.button(btn_label, key = f"hb_{i}"):
-                st.session_state.selected_blueprint = a_key
-                st.rerun()
-            st.caption(f"Cost: ${a_data['cost']/1_000_000:.1f}M")
-
-    with hb_cols[-1]:
-        if st.button("❌ Exit", key = "hb_close"):
-            st.session_state.build_mode_active = False
+    with col_btn:
+        if st.button(btn_text, key = "toggle_build_mode_main", type = "primary" if not st.session_state.build_mode_active else "secondary", use_container_width = True):
+            st.session_state.build_mode_active = not st.session_state.build_mode_active
             st.rerun()
 
-    active_b = ASSETS[st.session_state.selected_blueprint]
-    st.markdown(f"**Selected Blueprint:** `{st.session_state.selected_blueprint}` - *{active_b['desc_effect']}* ")
+    if "active_build_tile" not in st.session_state:
+        st.session_state.active_build_tile = None
 
-cols = st.columns(4)
+    if st.session_state.build_mode_active:
+        st.info("🏗️ **BUILD MODE ACTIVE:** Select a blueprint from your hotbar below, then click **[Construct]** on any empty plot!")
 
-for i, tile_id in enumerate(st.session_state.grid.keys()):
-    col = cols[i % 4]
-    tile = st.session_state.grid[tile_id]
-    t_type = tile["type"]
+        hb_cols = st.columns(len(ASSETS) + 1)
+        asset_keys = list(ASSETS.keys())
 
-    css_class = "tile-empty"
-    icon = "🏗️"
-    if "Park" in t_type: css_class, icon = "tile-park", "🌳"
-    elif "Solar" in t_type: css_class, icon = "tile-solar", "☀️"
-    elif "Reservoir" in t_type: css_class, icon = "tile-reservoir", "💧"
-    elif "Factory" in t_type: css_class, icon = "tile-factory", "🏭"
-    elif "Commercial" in t_type: css_class, icon = "tile-commercial", "🏢"
+        for i, a_key in enumerate(asset_keys):
+            a_data = ASSETS[a_key]
+            is_selected = (st.session_state.selected_blueprint == a_key)
+            btn_label = f"✨ [{a_key}]" if is_selected else a_key
 
-    with col:
-        st.markdown(f"""
-        <div class = "tile-card {css_class}">
-            <h2 style = "margin:0;">{icon}</h2>
-            <b>Plot {tile_id}</b><br/>
-            <small>{t_type}</small>
-        </div>
-        """, unsafe_allow_html = True)
-
-        if t_type == "Empty Plot" and st.session_state.build_mode_active:
-            chosen_bp = st.session_state.selected_blueprint
-            b_data = ASSETS[chosen_bp]
-
-            if st.button(f"🏗️ Construct ({chosen_bp.split()[1]})", key = f"build_plot_{tile_id}"):
-                will_be_deficit = (st.session_state.budget - b_data["cost"]) < 0
-                if st.session_state.water < b_data["water_cost"]:
-                    st.error("Insufficient water!")
-                elif will_be_deficit and st.session_state.budget + 25_000_000 < b_data["cost"]:
-                    st.error("Budget too low for deficit!")
-                else:
-                    st.session_state.budget -= b_data["cost"]
-                    st.session_state.water -= b_data["water_cost"]
-                    st.session_state.temp_reduction += b_data["heat_mod"]
-                    st.session_state.solar_kwh += b_data["solar_mod"]
-                    st.session_state.grid[tile_id] = {
-                        "type": chosen_bp,
-                        "upkeep_cost": b_data["upkeep_cost"],
-                        "upkeep_water": b_data["upkeep_water"]
-                    }
+            with hb_cols[i]:
+                if st.button(btn_label, key = f"hb_{i}"):
+                    st.session_state.selected_blueprint = a_key
                     st.rerun()
+                st.caption(f"Cost: ${a_data['cost']/1_000_000:.1f}M")
 
-        elif t_type != "Empty Plot" and st.session_state.build_mode_active:
-            if st.button(f" Demolish [Plot {tile_id}]", key = f"clear_{tile_id}"):
-                if st.session_state.budget >= 1_000_000:
-                    st.session_state.budget -= 1_000_000
-                    if "Park" in t_type: st.session_state.temp_reduction = max(0.0, st.session_state.temp_reduction - 0.6)
-                    elif "Solar" in t_type: st.session_state.solar_kwh = max(0, st.session_state.solar_kwh - 1200)
-                    elif "Factory" in t_type: st.session_state.temp_reduction = min(4.0, st.session_state.temp_reduction + 0.8)
-                    elif "Commercial" in t_type: st.session_state.temp_reduction = min(4.0, st.session_state.temp_reduction + 0.4)
-                    st.session_state.grid[tile_id] = {"type": "Empty Plot", "upkeep_cost": 0, "upkeep_water": 0}
-                    st.rerun()
-                else:
-                    st.error("Need $1M for demolition!")
+        with hb_cols[-1]:
+            if st.button("❌ Exit", key = "hb_close"):
+                st.session_state.build_mode_active = False
+                st.rerun()
 
-if st.session_state.active_build_tile is not None:
-    t_id = st.session_state.active_build_tile
-    st.markdown("---")
-    st.warning(f"🏗️ **BUILD MODE ACTIVE: Constructing on Plot {t_id}")
-    col_m1, col_m2 = st.columns([2, 1])
+        active_b = ASSETS[st.session_state.selected_blueprint]
+        st.markdown(f"**Selected Blueprint:** `{st.session_state.selected_blueprint}` - *{active_b['desc_effect']}* ")
 
-    with col_m1:
-        chosen_asset = st.selectbox("Select Blueprint Option", list(ASSETS.keys()))
-        asset_data = ASSETS[chosen_asset]
-        st.markdown(f"**Upfront Cost:** ${asset_data['cost']:,} | **Water Needed:** {asset_data['water_cost']} Units")
-        st.markdown(f"**Annual Upkeep:** ${asset_data['upkeep_cost']:,}/yr | **Environmental Effect:** {asset_data['desc_effect']}")
+    cols = st.columns(4)
 
-        will_be_deficit = (st.session_state.budget - asset_data["cost"]) < 0
-        if will_be_deficit:
-            st.error("⚠️ Warning: Deficit financing required! ⚠️")
-            confirm_deficit = st.checkbox("Are you sure you want to go into a deficit to construct this?")
-        else:
-            confirm_deficit = True
+    for i, tile_id in enumerate(st.session_state.grid.keys()):
+        col = cols[i % 4]
+        tile = st.session_state.grid[tile_id]
+        t_type = tile["type"]
 
-    with col_m2:
-        st.write("")
-        st.write("")
-        if st.button("✅ Confirm Blueprint Construction", key = "confirm_build_btn"):
-            if not confirm_deficit and will_be_deficit:
-                st.error("Authorize debt first!")
-            elif st.session_state.water < asset_data["water_cost"]:
-                st.error("Insufficient water!")
+        css_class = "tile-empty"
+        icon = "🏗️"
+        if "Park" in t_type: css_class, icon = "tile-park", "🌳"
+        elif "Solar" in t_type: css_class, icon = "tile-solar", "☀️"
+        elif "Reservoir" in t_type: css_class, icon = "tile-reservoir", "💧"
+        elif "Factory" in t_type: css_class, icon = "tile-factory", "🏭"
+        elif "Commercial" in t_type: css_class, icon = "tile-commercial", "🏢"
+
+        with col:
+            st.markdown(f"""
+            <div class = "tile-card {css_class}">
+                <h2 style = "margin:0;">{icon}</h2>
+                <b>Plot {tile_id}</b><br/>
+                <small>{t_type}</small>
+            </div>
+            """, unsafe_allow_html = True)
+
+            if t_type == "Empty Plot" and st.session_state.build_mode_active:
+                chosen_bp = st.session_state.selected_blueprint
+                b_data = ASSETS[chosen_bp]
+
+                if st.button(f"🏗️ Construct ({chosen_bp.split()[1]})", key = f"build_plot_{tile_id}"):
+                    will_be_deficit = (st.session_state.budget - b_data["cost"]) < 0
+                    if st.session_state.water < b_data["water_cost"]:
+                        st.error("Insufficient water!")
+                    elif will_be_deficit and st.session_state.budget + 25_000_000 < b_data["cost"]:
+                        st.error("Budget too low for deficit!")
+                    else:
+                        st.session_state.budget -= b_data["cost"]
+                        st.session_state.water -= b_data["water_cost"]
+                        st.session_state.temp_reduction += b_data["heat_mod"]
+                        st.session_state.solar_kwh += b_data["solar_mod"]
+                        st.session_state.grid[tile_id] = {
+                            "type": chosen_bp,
+                            "upkeep_cost": b_data["upkeep_cost"],
+                            "upkeep_water": b_data["upkeep_water"]
+                        }
+                        st.rerun()
+
+            elif t_type != "Empty Plot" and st.session_state.build_mode_active:
+                if st.button(f" Demolish [Plot {tile_id}]", key = f"clear_{tile_id}"):
+                    if st.session_state.budget >= 1_000_000:
+                        st.session_state.budget -= 1_000_000
+                        if "Park" in t_type: st.session_state.temp_reduction = max(0.0, st.session_state.temp_reduction - 0.6)
+                        elif "Solar" in t_type: st.session_state.solar_kwh = max(0, st.session_state.solar_kwh - 1200)
+                        elif "Factory" in t_type: st.session_state.temp_reduction = min(4.0, st.session_state.temp_reduction + 0.8)
+                        elif "Commercial" in t_type: st.session_state.temp_reduction = min(4.0, st.session_state.temp_reduction + 0.4)
+                        st.session_state.grid[tile_id] = {"type": "Empty Plot", "upkeep_cost": 0, "upkeep_water": 0}
+                        st.rerun()
+                    else:
+                        st.error("Need $1M for demolition!")
+
+    if st.session_state.active_build_tile is not None:
+        t_id = st.session_state.active_build_tile
+        st.markdown("---")
+        st.warning(f"🏗️ **BUILD MODE ACTIVE: Constructing on Plot {t_id}")
+        col_m1, col_m2 = st.columns([2, 1])
+
+        with col_m1:
+            chosen_asset = st.selectbox("Select Blueprint Option", list(ASSETS.keys()))
+            asset_data = ASSETS[chosen_asset]
+            st.markdown(f"**Upfront Cost:** ${asset_data['cost']:,} | **Water Needed:** {asset_data['water_cost']} Units")
+            st.markdown(f"**Annual Upkeep:** ${asset_data['upkeep_cost']:,}/yr | **Environmental Effect:** {asset_data['desc_effect']}")
+
+            will_be_deficit = (st.session_state.budget - asset_data["cost"]) < 0
+            if will_be_deficit:
+                st.error("⚠️ Warning: Deficit financing required! ⚠️")
+                confirm_deficit = st.checkbox("Are you sure you want to go into a deficit to construct this?")
             else:
-                st.session_state.budget -= asset_data["cost"]
-                st.session_state.water -= asset_data["water_cost"]
-                st.session_state.temp_reduction += asset_data["heat_mod"]
-                st.session_state.solar_kwh += asset_data["solar_mod"]
-                st.session_state.grid[t_id] = {
-                    "type": chosen_asset,
-                    "upkeep_cost": asset_data["upkeep_cost"],
-                    "upkeep_water": asset_data["upkeep_water"]
-                }
+                confirm_deficit = True
+
+        with col_m2:
+            st.write("")
+            st.write("")
+            if st.button("✅ Confirm Blueprint Construction", key = "confirm_build_btn"):
+                if not confirm_deficit and will_be_deficit:
+                    st.error("Authorize debt first!")
+                elif st.session_state.water < asset_data["water_cost"]:
+                    st.error("Insufficient water!")
+                else:
+                    st.session_state.budget -= asset_data["cost"]
+                    st.session_state.water -= asset_data["water_cost"]
+                    st.session_state.temp_reduction += asset_data["heat_mod"]
+                    st.session_state.solar_kwh += asset_data["solar_mod"]
+                    st.session_state.grid[t_id] = {
+                        "type": chosen_asset,
+                        "upkeep_cost": asset_data["upkeep_cost"],
+                        "upkeep_water": asset_data["upkeep_water"]
+                    }
+                    st.session_state.active_build_tile = None
+                    st.rerun()
+
+            if st.button("❌ Cancel Build Mode", key = "cancel_build_btn"):
                 st.session_state.active_build_tile = None
                 st.rerun()
 
-        if st.button("❌ Cancel Build Mode", key = "cancel_build_btn"):
-            st.session_state.active_build_tile = None
-            st.rerun()
+    st.markdown("---")
 
-st.markdown("---")
+with tab_districts:
+    render_districts
+
+with tab_research:
+    render_research
 
 if st.session_state.game_over:
     st.error("🚨 **Game Over!** Public approval hit 0 or debt became unmanageable. Review your strategy and try again.")
@@ -418,7 +430,7 @@ elif st.button("⏩ Advance to Next Year"):
 
     st.session_state.turn += 1
 
-    total_upkeep_cost = sum(t["upkeep_cost"] for t in st.session_state.grid.values())
+    total_upkeep = sum(t["upkeep_cost"] for t in st.session_state.grid.values())
     total_upkeep_water = sum(t["upkeep_water"] for t in st.session_state.grid.values())
     asset_income = sum(ASSETS.get(t["type"], {}).get("income", 0) for t in st.session_state.grid.values() if t["type"] != "Empty Plot")
 
@@ -446,7 +458,7 @@ elif st.button("⏩ Advance to Next Year"):
         yearly_water_gain += 1_500
         st.session_state.approval_res -= 6
 
-    net_cash_flow = yearly_income - total_upkeep_cost
+    net_cash_flow = yearly_income - total_upkeep
     if st.session_state.budget < 0:
         interest_penalty = abs(st.session_state.budget) * 0.08
         net_cash_flow -= interest_penalty
@@ -548,6 +560,15 @@ elif st.button("⏩ Advance to Next Year"):
 
     st.session_state.event_log.append(f"Year {st.session_state.turn}: {event_desc}")
 
+    d_mult = DISTRICTS.get(st.session_state.active_district, 
+                           DISTRICTS["None"])
+    yearly_income = int(yearly_income * d_mult["income_mult"])
+
+    total_upkeep = int(total_upkeep * d_mult["upkeep_mult"])
+
+    if "Smart Grid AI" in st.session_state.unlocked_tech:
+        total_upkeep = int(total_upkeep * 0.85)
+
     if st.session_state.budget < 0:
         st.session_state.approval_res -= 8
         st.session_state.approval_biz -= 12
@@ -572,7 +593,7 @@ elif st.button("⏩ Advance to Next Year"):
         "base_income": 3_500_000,
         "asset_income": asset_income,
         "solar_income": st.session_state.solar_kwh * 400,
-        "upkeep_cost": total_upkeep_cost,
+        "upkeep_cost": total_upkeep,
         "interest_paid": (abs(old_budget) * 0.08) if old_budget < 0 or st.session_state.debt > 0 else 0,
         "env_curr": st.session_state.approval_env,
         "env_diff": st.session_state.approval_env - old_env,
