@@ -50,7 +50,7 @@ goals = [
 ]
 
 def get_neighbors(tile_id):
-    """Returns a list of neighboring IDs for a given slot"""
+    """Returns neighboring IDs"""
     row = (tile_id - 1) // 4
     col = (tile_id - 1) % 4
     neighbors = []

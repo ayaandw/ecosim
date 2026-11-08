@@ -5,6 +5,7 @@ from components import ASSETS, goals, get_neighbors
 from screens import render_setup_screen, render_tutorial_screen
 from districts import DISTRICTS, render_districts
 from research import TREE, render_research
+from groups import spawn, eval, render_quests
 
 st.set_page_config(page_title = "EcoSim, a Climate Simulation Game", page_icon = "🌱", layout = "wide")
 
@@ -94,6 +95,9 @@ st.sidebar.markdown(f"**Active Policy:** {st.session_state.active_policy}")
 
 st.sidebar.markdown("---")
 st.sidebar.header("🎯 Active Governing Goals")
+
+st.sidebar.markdown("---")
+render_quests()
 
 for i, goal in enumerate(st.session_state.selected_goals, start = 1):
     if isinstance(goal, dict):
@@ -469,6 +473,8 @@ elif st.button("⏩ Advance to Next Year"):
 
     faction_msg = ""
     faction_messages = []
+    eval()
+    spawn()
 
     if st.session_state.approval_env >= 85:
         st.session_state.budget += 1_000_000

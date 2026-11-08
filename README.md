@@ -3,7 +3,7 @@ An educational simulation game where players choose climate actions in order to 
 
 ---
 ## Demo
-* Demo at https://ecosim0.streamlit.app
+* Demo at https://ecosim0.streamlit.app or https://ayaandw.github.io/ecosim/
 
 ## How to Play
 * **Survive:** Balance a $15M budget, water reserves, and approval ratings without letting approvals drop to 0% or going to -$25M
