@@ -6,6 +6,8 @@ from screens import render_setup_screen, render_tutorial_screen
 from districts import DISTRICTS, render_districts
 from research import TREE, render_research
 from groups import spawn, eval, render_quests
+from finish import render_loss, render_win
+from inspector import render_inspector
 
 st.set_page_config(page_title = "EcoSim, a Climate Simulation Game", page_icon = "🌱", layout = "wide")
 
@@ -276,6 +278,9 @@ with tab_grid:
                         st.rerun()
                     else:
                         st.error("Need $1M for demolition!")
+    st.markdown("---")
+    with st.container(border = True):
+        render_inspector()
 
     if st.session_state.active_build_tile is not None:
         t_id = st.session_state.active_build_tile
@@ -330,74 +335,78 @@ with tab_research:
     render_research
 
 if st.session_state.game_over:
-    st.error("🚨 **Game Over!** Public approval hit 0 or debt became unmanageable. Review your strategy and try again.")
-    if st.button("🔄 Restart Simulation"):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.rerun()
+    render_loss()
 elif st.session_state.victory:
-    st.success("🏆 **10-Year Mayoral Term Completed!")
-    st.markdown("## **MAYORAL TERM PERFORMANCE**")
+    render_win()
+# if st.session_state.game_over:
+#     st.error("🚨 **Game Over!** Public approval hit 0 or debt became unmanageable. Review your strategy and try again.")
+#     if st.button("🔄 Restart Simulation"):
+#         for key in list(st.session_state.keys()):
+#             del st.session_state[key]
+#         st.rerun()
+# elif st.session_state.victory:
+#     st.success("🏆 **10-Year Mayoral Term Completed!")
+#     st.markdown("## **MAYORAL TERM PERFORMANCE**")
 
-    avg_approval = (st.session_state.approval_env + st.session_state.approval_biz + st.session_state.approval_res) / 3
-    net_worth = st.session_state.budget - st.session_state.debt
+#     avg_approval = (st.session_state.approval_env + st.session_state.approval_biz + st.session_state.approval_res) / 3
+#     net_worth = st.session_state.budget - st.session_state.debt
 
-    grade_env = "A" if st.session_state.temp_reduction >= 2.0 else ("B" if st.session_state.temp_reduction >= 1.0 else "C")
-    grade_fiscal = "A" if net_worth > 20_000_000 else ("B" if net_worth > 5_000_000 else "D")
-    grade_politics = "A" if avg_approval >= 75 else ("B" if avg_approval >= 55 else "C")
+#     grade_env = "A" if st.session_state.temp_reduction >= 2.0 else ("B" if st.session_state.temp_reduction >= 1.0 else "C")
+#     grade_fiscal = "A" if net_worth > 20_000_000 else ("B" if net_worth > 5_000_000 else "D")
+#     grade_politics = "A" if avg_approval >= 75 else ("B" if avg_approval >= 55 else "C")
 
-    col_g1, col_g2, col_g3 = st.columns(3)
-    col_g1.metric(" Climate Grade", grade_env, f"{st.session_state.temp_reduction:.1f}°C Heat Reduction")
-    col_g2.metric(" Fiscal Grade", grade_fiscal, f"${net_worth:,.0f} Net Worth")
-    col_g3.metric(" Governance Grade", grade_politics, f"{avg_approval:.1f}% Avg Approval")
+#     col_g1, col_g2, col_g3 = st.columns(3)
+#     col_g1.metric(" Climate Grade", grade_env, f"{st.session_state.temp_reduction:.1f}°C Heat Reduction")
+#     col_g2.metric(" Fiscal Grade", grade_fiscal, f"${net_worth:,.0f} Net Worth")
+#     col_g3.metric(" Governance Grade", grade_politics, f"{avg_approval:.1f}% Avg Approval")
 
-    st.markdown("###👥 **Demographic Approval Breakdown ➡️**")
-    if st.session_state.approval_env < 50:
-        st.warning("⚠️ **Environmental Critique:** Your administration prioritized immediate revenue over climate conservation. Your city's carbon footprint remains high.")
-    if st.session_state.approval_biz < 50:
-        st.warning("💼 **Commercial Critique:** Business leaders feel over-regulated and taxed, stifling commercial expansion.")
-    if st.session_state.approval_res < 50:
-        st.warning("🏡 **Civilian Critique:** Working-class residents bore the brunt of negative impacts from your policies.")
+#     st.markdown("###👥 **Demographic Approval Breakdown ➡️**")
+#     if st.session_state.approval_env < 50:
+#         st.warning("⚠️ **Environmental Critique:** Your administration prioritized immediate revenue over climate conservation. Your city's carbon footprint remains high.")
+#     if st.session_state.approval_biz < 50:
+#         st.warning("💼 **Commercial Critique:** Business leaders feel over-regulated and taxed, stifling commercial expansion.")
+#     if st.session_state.approval_res < 50:
+#         st.warning("🏡 **Civilian Critique:** Working-class residents bore the brunt of negative impacts from your policies.")
 
-    st.markdown("###🎯 **Governing Goals Evaluation**")
-    for i, goal in enumerate(st.session_state.selected_goals, start = 1):
-        goal_name = goal.get("name", "")
-        goal_desc = goal.get("desc", "")
-        achieved = False
-        status_msg = ""
+#     st.markdown("###🎯 **Governing Goals Evaluation**")
+#     for i, goal in enumerate(st.session_state.selected_goals, start = 1):
+#         goal_name = goal.get("name", "")
+#         goal_desc = goal.get("desc", "")
+#         achieved = False
+#         status_msg = ""
 
-        if "Protect the Climate" in goal_name:
-            achieved = st.session_state.temp_reduction >= 1.5 and st.session_state.approval_env >= 66
-            status_msg = f"Achieved {st.session_state.temp_reduction:.1f}°C / target 1.5°C and {st.session_state.approval_env:,}% / target 66%"
-        elif "Fiscal Conservative" in goal_name:
-            achieved = net_worth >= 20_000_000
-            status_msg = f"Finished with ${net_worth:,.0f} net worth / target $20,000,000"
-        elif "Water Security" in goal_name:
-            achieved = st.session_state.water >= 2000
-            status_msg = f"Finished with {st.session_state.water:,} units / target 2,000 units"
-        elif "Pro-Growth Administration" in goal_name:
-            achieved = st.session_state.approval_biz >= 80
-            status_msg = f"Business approval hit {st.session_state.approval_biz}% / target 80%"
-        elif "Climate Activist" in goal_name:
-            achieved = st.session_state.temp_reduction >= 2.0
-            status_msg = f"Achieved {st.session_state.temp_reduction:.1f}°C / target 2°C"
-        elif "Population Peacemaker" in goal_name:
-            achieved = (st.session_state.approval_env >= 70 and
-                        st.session_state.approval_biz >= 70 and
-                        st.session_state.approval_res >= 70)
-            status_msg = f"Min Approval: {min(st.session_state.approval_env, st.session_state.approval_biz, st.session_state.approval_res)}% / target 70%"
+#         if "Protect the Climate" in goal_name:
+#             achieved = st.session_state.temp_reduction >= 1.5 and st.session_state.approval_env >= 66
+#             status_msg = f"Achieved {st.session_state.temp_reduction:.1f}°C / target 1.5°C and {st.session_state.approval_env:,}% / target 66%"
+#         elif "Fiscal Conservative" in goal_name:
+#             achieved = net_worth >= 20_000_000
+#             status_msg = f"Finished with ${net_worth:,.0f} net worth / target $20,000,000"
+#         elif "Water Security" in goal_name:
+#             achieved = st.session_state.water >= 2000
+#             status_msg = f"Finished with {st.session_state.water:,} units / target 2,000 units"
+#         elif "Pro-Growth Administration" in goal_name:
+#             achieved = st.session_state.approval_biz >= 80
+#             status_msg = f"Business approval hit {st.session_state.approval_biz}% / target 80%"
+#         elif "Climate Activist" in goal_name:
+#             achieved = st.session_state.temp_reduction >= 2.0
+#             status_msg = f"Achieved {st.session_state.temp_reduction:.1f}°C / target 2°C"
+#         elif "Population Peacemaker" in goal_name:
+#             achieved = (st.session_state.approval_env >= 70 and
+#                         st.session_state.approval_biz >= 70 and
+#                         st.session_state.approval_res >= 70)
+#             status_msg = f"Min Approval: {min(st.session_state.approval_env, st.session_state.approval_biz, st.session_state.approval_res)}% / target 70%"
 
-        if achieved:
-            st.success(f"✅ **Goal {i}: {goal_name}** PASSED!\n\n*{status_msg}")
-        else:
-            st.error(f"❌ **Goal {i}: {goal_name}** FAILED!\n\n*{status_msg}*")
+#         if achieved:
+#             st.success(f"✅ **Goal {i}: {goal_name}** PASSED!\n\n*{status_msg}")
+#         else:
+#             st.error(f"❌ **Goal {i}: {goal_name}** FAILED!\n\n*{status_msg}*")
     
-    if st.button("🔄 Play Again"):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.rerun()
+#     if st.button("🔄 Play Again"):
+#         for key in list(st.session_state.keys()):
+#             del st.session_state[key]
+#         st.rerun()
 
-elif st.button("⏩ Advance to Next Year"):
+if st.button("⏩ Advance to Next Year"):
     old_budget = st.session_state.budget
     old_env = st.session_state.approval_env
     old_biz = st.session_state.approval_biz

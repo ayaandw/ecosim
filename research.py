@@ -48,7 +48,6 @@ def render_research():
                 st.markdown(f"#### {t_name} (Tier {t_data['tier']})")
                 st.write(t_data["desc"])
                 st.caption(f"Cost: ${t_data['cost']:,.0f} | Required Energy: {t_data['energy_req']:,} kWh")
-
                 if is_unlocked:
                     st.success("Researched & In Effect")
                 else:
