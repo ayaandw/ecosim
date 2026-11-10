@@ -96,6 +96,7 @@ def render_tutorial_screen():
             st.rerun()
         if col_t2.button(" Next: Policies and Crises ➡️"):
             st.session_state.tutorial_step = 4
+            st.rerun()
 
     elif st.session_state.tutorial_step == 4:
         st.markdown("""

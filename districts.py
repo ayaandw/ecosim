@@ -10,7 +10,7 @@ DISTRICTS = {
     },
     "💻 Tech Hub": {
         "desc": "Attracts big tech corporations. Boosts commercial/industrial"
-        "income by 25%, but inreases energy drain.",
+        " income by 25%, but inreases energy drain.",
         "cost": 5_000_000,
         "income_mult": 1.25,
         "env_mult": 0.9,
@@ -47,7 +47,7 @@ def render_districts():
         chosen_district = st.selectbox(
             "Select City District Designation",
             list(DISTRICTS.keys()),
-            index = list(DISTRICTS.keys().index(current_district))
+            index = list(DISTRICTS.keys()).index(current_district)
         )
         d_data = DISTRICTS[chosen_district]
         st.info(f"**Description:** {d_data['desc']}")
@@ -64,8 +64,7 @@ def render_districts():
                     st.session_state.budget -= d_data["cost"]
                     st.session_state.active_district = chosen_district
                     st.success(f"Successfully enacted in {chosen_district}!")
+                    st.success("✅ Active District")
                     st.rerun()
                 else:
                     st.error("Insufficient budget to create district.")
-            else:
-                st.success("✅ Active District")

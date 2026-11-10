@@ -31,8 +31,8 @@ TREE = {
 }
 
 def render_research():
-    st.markdown("### R&D Lab")
-    st.markdown("Invest funds and energy generation to research more advanced tech.")
+    st.markdown("### 🔬 R&D Lab")
+    st.markdown("💡 Invest funds and energy generation to research more advanced tech.")
 
     if "unlocked_tech" not in st.session_state:
         st.session_state.unlocked_tech = []
@@ -49,16 +49,16 @@ def render_research():
                 st.write(t_data["desc"])
                 st.caption(f"Cost: ${t_data['cost']:,.0f} | Required Energy: {t_data['energy_req']:,} kWh")
                 if is_unlocked:
-                    st.success("Researched & In Effect")
+                    st.success("✅ Researched and in effect")
                 else:
                     can_afford = st.session_state.budget >= t_data["cost"]
                     has_energy = st.session_state.solar_kwh >= t_data["energy_req"]
 
                     if st.button(f"Unlock {t_name}", key = f"tech_{i}", use_container_width = True):
                         if not can_afford:
-                            st.error("Insufficient budget!")
+                            st.error("❌ Insufficient budget!")
                         elif not has_energy:
-                            st.error("Insufficient clean energy supply!")
+                            st.error("⚡ Insufficient clean energy supply!")
                         else:
                             st.session_state.budget -= t_data["cost"]
                             st.session_state.unlocked_tech.append(t_name)
@@ -66,7 +66,7 @@ def render_research():
                         if t_name == "Air Cleanup":
                             st.session_state.temp_reduction += 0.8
                         elif t_name == "Desalination Plants":
-                            st.session_state.water_supply += 1000
+                            st.session_state.water += 1000
 
-                        st.success(f"Research {t_name} unlocked!")
+                        st.success(f"🎉 Research {t_name} unlocked!")
                         st.rerun()

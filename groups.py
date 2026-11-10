@@ -7,7 +7,7 @@ QUESTS = [
         "title": "Greenifying Mandate",
         "desc": "Environmentalists demand that you build at least 2 green plots (Parks/Solar) within the next 2 years.",
         "type": "build",
-        "target_types": ["Urban Park", "Solar Array"],
+        "target_types": ["🌳 Urban Park", "☀️ Solar Array"],
         "target_count": 2,
         "turns": 2,
         "reward_env": 10,
@@ -19,7 +19,7 @@ QUESTS = [
         "title": "Industrial Expansion",
         "desc": "Business leaders urge you to build a revenue-generating plot (Factory/Commercial) within 2 years.",
         "type": "build",
-        "target_types": ["Industrial Factory", "Commercial Block"],
+        "target_types": ["🏭 Industrial Factory", "🏢 Commercial Block"],
         "target_count": 1,
         "turns": 2,
         "reward_biz": 12,
@@ -40,7 +40,7 @@ QUESTS = [
 ]
 
 def spawn():
-    if "active_quest" not in st.session_state or st.session_state.active_quests is None:
+    if "active_quest" not in st.session_state or st.session_state.active_quest is None:
         if random.random() < 0.6:
             chosen = random.choice(QUESTS)
             st.session_state.active_quest = chosen.copy()
@@ -52,6 +52,9 @@ def progress(quest):
     return 0
 
 def eval():
+    if "active_quest" not in st.session_state or st.session_state.active_quest is None:
+        return
+    
     q = st.session_state.active_quest
     success = False
     if "active_quest" not in st.session_state or q is None:
@@ -63,7 +66,7 @@ def eval():
         if built_start >= q["target_count"]:
             success = True
     elif q["type"] == "water":
-        if st.session_state.water_supply >= q["target_water"]:
+        if st.session_state.water >= q["target_water"]:
             success = True
 
     if success:
@@ -73,24 +76,24 @@ def eval():
         if "reward_res" in q: st.session_state.approval_res += q["reward_res"]
         st.session_state.event_log.append(f" Group Mandate Succeeded! {q['group']} rewarded your administration.")
     else:
-        q["turns_remaining"] -= 1
-        if q["turns_remaining"] <= 0:
+        q["turns"] -= 1
+        if q["turns"] <= 0:
             if "penalty_env" in q: st.session_state.approval_env += q["penalty_env"]
             if "penalty_biz" in q: st.session_state.approval_biz += q["penalty_biz"]
-            if "penalty_res" in q: st.session_state.approval_rez += q["penalty_res"]
+            if "penalty_res" in q: st.session_state.approval_res += q["penalty_res"]
             st.session_state.event_log.append(f"Group Mandate Failed! {q['group']} lost faith in your leadership.")
             st.session_state.active_quest = None
             return
 
     if success:
-        st.session_state.active_quests = None
+        st.session_state.active_quest = None
 
 def render_quests():
-    if "active_quest" in st.session_state and st.session_state.active_quests is not None:
+    if "active_quest" in st.session_state and st.session_state.active_quest is not None:
         q = st.session_state.active_quest
         with st.container(border = True):
-            st.markdown(f"** Active Mandate: {q['faction']}**")
+            st.markdown(f"** Active Mandate: {q['group']}**")
             st.write(f"*{q['title']}*")
-            st.caption(f"{q['desc']} | **Turns Left:** {q['turns_remaining']}")
+            st.caption(f"{q['desc']} | **Turns Left:** {q['turns']}")
     else:
-        st.sidebar.caption(" No active demands right now")
+        st.sidebar.caption("📜 No active demands right now")
