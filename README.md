@@ -19,3 +19,6 @@ An educational simulation game where players choose climate actions in order to 
 ## Development
 * Built with Python and Streamlit plugin
 * Used Pandas for data export at conclusion of simulation
+
+<img width="1868" height="961" alt="image" src="https://github.com/user-attachments/assets/4e008a01-f209-4ed1-8e47-dfdbd3ec0a3a" />
+
