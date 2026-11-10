@@ -63,10 +63,10 @@ def render_research():
                             st.session_state.budget -= t_data["cost"]
                             st.session_state.unlocked_tech.append(t_name)
                         
-                        if t_name == "Air Cleanup":
-                            st.session_state.temp_reduction += 0.8
-                        elif t_name == "Desalination Plants":
-                            st.session_state.water += 1000
+                            if t_name == "Air Cleanup":
+                                st.session_state.temp_reduction += 0.8
+                            elif t_name == "Desalination Plants":
+                                st.session_state.water += 1000
 
                         st.success(f"🎉 Research {t_name} unlocked!")
                         st.rerun()
