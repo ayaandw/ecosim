@@ -596,7 +596,7 @@ elif st.session_state.victory:
 st.markdown("### 📈 Municipal Climate Data & Export")
 if len(st.session_state.history) > 0:
     df_history = pd.DataFrame(st.session_state.history)
-    st.dataframe(df_history, width='stretch')
+    st.dataframe(df_history, use_container_width = True)
 
     csv_data = df_history.to_csv(index=False).encode('utf-8')
     st.download_button(
